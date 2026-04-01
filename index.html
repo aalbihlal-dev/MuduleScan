@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Module Scanner">
+<meta name="theme-color" content="#080808">
+<title>Module Scanner</title>
+<link rel="manifest" href="data:application/manifest+json,{
+  %22name%22:%22Module%20Scanner%22,
+  %22short_name%22:%22Scanner%22,
+  %22start_url%22:%22/%22,
+  %22display%22:%22standalone%22,
+  %22background_color%22:%22%23080808%22,
+  %22theme_color%22:%22%23080808%22,
+  %22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Crect%20width='100'%20height='100'%20rx='20'%20fill='%23f59e0b'/%3E%3Ctext%20y='.9em'%20font-size='80'%20x='10'%3E%F0%9F%94%B2%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]
+}">
+<style>
+:root{
+  --bg:#080808;--s1:#111;--s2:#1a1a1a;--bd:#252525;
+  --tx:#e8e8e8;--mu:#555;--mu2:#2a2a2a;
+  --ac:#f59e0b;--bl:#3b82f6;--gn:#22c55e;--rd:#ef4444;
+  --r:10px;
+  --st:env(safe-area-inset-top,0px);
+  --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--tx);font-family:ui-monospace,'SF Mono',monospace;min-height:100dvh}
+
+/* INSTALL BANNER */
+.install-bar{background:#0a1f0a;border-bottom:1px solid #1a4a1a;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.install-bar.hid{display:none}
+.install-bar .msg{font-size:11px;color:var(--gn);letter-spacing:.04em;line-height:1.5;flex:1}
+.install-bar .msg strong{font-size:12px;display:block;margin-bottom:2px}
+.ibtn{height:34px;padding:0 14px;font-size:11px;font-weight:700;font-family:inherit;letter-spacing:.06em;border:none;border-radius:7px;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.ibtn:active{opacity:.7}
+.ibtn-install{background:var(--gn);color:#000}
+.ibtn-dismiss{background:transparent;color:var(--mu);border:1px solid var(--bd)}
+
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:50;background:rgba(8,8,8,.97);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--bd);padding:12px 16px;padding-top:calc(12px + var(--st));display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hdr-l .sub{font-size:9px;color:var(--mu);letter-spacing:.2em;margin-bottom:2px}
+.hdr-l .ttl{font-size:16px;font-weight:700;color:#fff;letter-spacing:.04em}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.hdr-r .num{font-size:24px;font-weight:700;color:var(--ac);line-height:1;text-align:right}
+.hdr-r .lbl{font-size:9px;color:var(--mu);letter-spacing:.12em;text-align:right}
+
+/* PAGE */
+.page{padding:14px 14px 130px}
+.empty{text-align:center;padding:80px 20px}
+.empty .ico{font-size:52px;margin-bottom:16px}
+.empty .t{font-size:13px;color:var(--mu);letter-spacing:.1em;margin-bottom:6px}
+.empty .s{font-size:11px;color:var(--mu2);letter-spacing:.06em}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:12px;overflow:hidden;animation:fu .2s ease}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px;border-bottom:1px solid var(--bd);gap:8px}
+.ch-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.num-badge{background:var(--ac);color:#000;font-size:11px;font-weight:700;border-radius:5px;padding:2px 8px;letter-spacing:.04em;flex-shrink:0}
+.csn{font-size:15px;font-weight:700;color:var(--ac);letter-spacing:.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.csn.dim{color:var(--mu);font-size:12px;font-weight:400}
+.ch-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.pills{display:flex;gap:4px;padding:0 12px 10px}
+.pill{flex:1;height:3px;border-radius:2px;background:var(--mu2);transition:background .3s}
+.pill.done{background:var(--gn)}.pill.act{background:var(--ac)}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bd)}
+.pc{background:var(--s1);padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.plbl{font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--mu);align-self:flex-start}
+.pimg{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:7px;border:1px solid var(--bd);display:block}
+.ph{width:100%;aspect-ratio:4/3;border-radius:7px;border:2px dashed var(--mu2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--mu2);cursor:pointer;background:var(--s2)}
+.ph:active{border-color:var(--mu)}.ph.off{opacity:.3;pointer-events:none}
+.ph .ei{font-size:28px}.ph .et{font-size:9px;letter-spacing:.1em}
+.pname{font-size:10px;word-break:break-all;text-align:center;line-height:1.4}
+.pname.ready{color:var(--bl)}.pname.dim{color:var(--mu2)}
+.srow{padding:8px 12px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px}
+.sbadge{font-size:9px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:4px;flex-shrink:0}
+.sscan{background:#0d2a0d;color:var(--gn);border:1px solid #1a4a1a;animation:bl 1s infinite}
+.sfound{background:#0d1525;color:var(--bl);border:1px solid #1e3a6a}
+.snope{background:#200d0d;color:var(--rd);border:1px solid #4a1a1a}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+.sv{font-size:13px;font-weight:700;color:var(--ac)}
+.irow{padding:10px 12px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px}
+.irow label{font-size:10px;color:var(--mu);white-space:nowrap}
+.irow input{flex:1;min-width:0;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:#fff;font-family:inherit;font-size:15px;font-weight:700;letter-spacing:.04em;padding:8px 10px;outline:none;-webkit-appearance:none}
+.irow input:focus{border-color:var(--ac)}
+
+/* BUTTONS */
+.btn{border:none;cursor:pointer;font-family:inherit;font-weight:700;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;gap:5px;transition:opacity .15s;letter-spacing:.05em}
+.btn:active{opacity:.7}.btn:disabled{opacity:.3;cursor:default}
+.bsm{height:32px;padding:0 11px;font-size:11px}
+.bset{height:40px;padding:0 14px;font-size:13px;background:var(--ac);color:#000;flex-shrink:0}
+.bedit{height:32px;padding:0 11px;font-size:11px;background:#1a1200;color:var(--ac);border:1px solid #3a2800}
+.bdel{background:var(--s2);color:var(--mu);border:1px solid var(--bd)}
+.bgn{background:#0a1f0a;color:var(--gn);border:1px solid #1a4a1a}
+
+/* BOTTOM BAR */
+.btm{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(8,8,8,.97);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--bd);padding:12px 14px;padding-bottom:calc(12px + var(--sb));display:flex;gap:10px;align-items:center}
+.bnew{flex:1;height:54px;font-size:14px;background:var(--ac);color:#000;border-radius:var(--r)}
+.bzip{width:54px;height:54px;font-size:11px;flex-direction:column;gap:1px;background:#0d1525;color:var(--bl);border:1px solid #1e3a6a;border-radius:var(--r)}
+.bzip .zi{font-size:18px;line-height:1}
+
+/* TOAST */
+.toast{position:fixed;top:calc(68px + var(--st));left:50%;transform:translateX(-50%);border-radius:20px;padding:8px 20px;font-size:12px;font-weight:700;letter-spacing:.06em;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:92vw;text-align:center}
+.tok{background:#0a1f0a;color:var(--gn);border:1px solid #1a4a1a}
+.twarn{background:#1a1200;color:var(--ac);border:1px solid #3a2800}
+.tshow{opacity:1}
+
+/* MODALS */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:200;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;overflow-y:auto;padding:20px 14px;padding-top:calc(20px + var(--st));padding-bottom:calc(20px + var(--sb))}
+.modal.hid{display:none}
+.mbox{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px;max-width:420px;width:100%;margin:auto}
+.mttl{font-size:14px;font-weight:700;color:#fff;letter-spacing:.06em}
+.msub{font-size:11px;color:var(--mu);letter-spacing:.04em;line-height:1.6}
+.minp{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:7px;color:#fff;font-family:inherit;font-size:16px;font-weight:700;letter-spacing:.06em;padding:10px 12px;outline:none;-webkit-appearance:none}
+.minp:focus{border-color:var(--ac)}
+.mbtn-row{display:flex;gap:8px}
+.mbtn-ok{flex:1;height:44px;font-size:13px;background:var(--ac);color:#000}
+.mbtn-cl{height:44px;padding:0 16px;font-size:13px;background:var(--s2);color:var(--mu);border:1px solid var(--bd)}
+.review-item{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.ri-num{font-size:9px;color:var(--mu);letter-spacing:.15em;font-weight:700}
+.ri-file{font-size:12px;color:var(--bl);letter-spacing:.03em;padding:5px 8px;background:var(--bg);border-radius:5px;border:1px solid var(--bd)}
+.ovt{font-size:16px;font-weight:700;color:#fff;letter-spacing:.06em;text-align:center}
+.ovs{font-size:12px;color:var(--mu);text-align:center;max-width:280px}
+.prog{width:260px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden}
+.progf{height:100%;background:var(--ac);border-radius:2px;transition:width .3s}
+.spin{font-size:36px;animation:sp 1.2s linear infinite;text-align:center}
+@keyframes sp{to{transform:rotate(360deg)}}
+.zlink{background:#0d1525;border:1px solid #1e3a6a;border-radius:var(--r);padding:16px;text-align:center;width:100%;max-width:300px}
+.zlink p{font-size:11px;color:var(--mu);margin-bottom:10px;letter-spacing:.04em;line-height:1.6}
+.zlink a{display:block;background:var(--bl);color:#fff;border-radius:8px;padding:13px;font-size:13px;font-weight:700;letter-spacing:.06em;text-decoration:none}
+.zlink a:active{opacity:.8}
+.center-col{display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px 0}
+
+/* iOS install instructions modal */
+.ios-steps{display:flex;flex-direction:column;gap:10px}
+.ios-step{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--tx);line-height:1.5}
+.ios-step .sn{background:var(--ac);color:#000;font-size:10px;font-weight:700;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+
+.hid{display:none!important}
+canvas{display:none}
+</style>
+</head>
+<body>
+
+<!-- INSTALL BANNER (shown on Android/desktop with install prompt) -->
+<div class="install-bar hid" id="installBar">
+  <div class="msg">
+    <strong>&#128268; INSTALL FOR OFFLINE USE</strong>
+    Install this app — works with no internet on site
+  </div>
+  <button class="ibtn ibtn-install" id="installBtn" onclick="installApp()">INSTALL</button>
+  <button class="ibtn ibtn-dismiss" onclick="dismissInstall()">&#10005;</button>
+</div>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="sub">ACWA · FIELD TOOL</div>
+    <div class="ttl">MODULE SCANNER</div>
+  </div>
+  <div class="hdr-r">
+    <div>
+      <div class="num" id="cnt">0</div>
+      <div class="lbl">MODULES</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast tok" id="toast"></div>
+
+<!-- iOS INSTALL INSTRUCTIONS MODAL -->
+<div class="modal hid" id="iosModal">
+  <div class="mbox">
+    <div class="mttl">&#128241; ADD TO HOME SCREEN</div>
+    <div class="msub">Follow these steps to install on your iPhone — works offline after:</div>
+    <div class="ios-steps">
+      <div class="ios-step"><div class="sn">1</div><div>Tap the <strong>Share button</strong> &#11014;&#65039; at the bottom of Safari</div></div>
+      <div class="ios-step"><div class="sn">2</div><div>Scroll down and tap <strong>"Add to Home Screen"</strong></div></div>
+      <div class="ios-step"><div class="sn">3</div><div>Tap <strong>Add</strong> — the app icon will appear on your home screen</div></div>
+      <div class="ios-step"><div class="sn">4</div><div>Open it from home screen — it will work fully <strong>offline</strong> on site</div></div>
+    </div>
+    <button class="btn mbtn-ok" onclick="closeModal('iosModal')">GOT IT</button>
+  </div>
+</div>
+
+<!-- ZIP NAME MODAL -->
+<div class="modal hid" id="nameModal">
+  <div class="mbox">
+    <div class="mttl">NAME YOUR ZIP FILE</div>
+    <div class="msub">Example: MVPS-1, MVPS-2, Block-A...</div>
+    <input class="minp" id="zipNameInput" type="text" placeholder="MVPS-1"
+      autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+      onkeydown="if(event.key==='Enter')goToReview()">
+    <div class="mbtn-row">
+      <button class="btn mbtn-cl" onclick="closeModal('nameModal')">CANCEL</button>
+      <button class="btn mbtn-ok" onclick="goToReview()">NEXT: REVIEW FILES</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW MODAL -->
+<div class="modal hid" id="reviewModal">
+  <div class="mbox" style="max-width:480px">
+    <div class="mttl">REVIEW FILE NAMES</div>
+    <div class="msub" id="reviewSub"></div>
+    <div id="reviewList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="mbtn-row">
+      <button class="btn mbtn-cl" onclick="closeModal('reviewModal')">BACK</button>
+      <button class="btn mbtn-ok" onclick="buildZip()">BUILD ZIP</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROGRESS MODAL -->
+<div class="modal hid" id="progModal">
+  <div class="center-col" style="flex:1">
+    <div class="spin" id="spin">&#9881;&#65039;</div>
+    <div class="ovt" id="ovt">BUILDING ZIP...</div>
+    <div class="prog"><div class="progf" id="progf" style="width:0%"></div></div>
+    <div class="ovs" id="ovs"></div>
+    <div class="zlink hid" id="zlink">
+      <p>TAP AND HOLD THE BUTTON BELOW<br>THEN TAP "DOWNLOAD LINKED FILE"</p>
+      <a id="zurl" href="#">&#128230; SAVE ZIP FILE</a>
+    </div>
+    <button class="btn bsm bdel hid" id="ovcls" onclick="closeModal('progModal')">CLOSE</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="empty" id="empty">
+    <div class="ico">&#11036;</div>
+    <div class="t">NO MODULES YET</div>
+    <div class="s">TAP + NEW MODULE TO START</div>
+  </div>
+  <div id="list"></div>
+</div>
+
+<div class="btm">
+  <button class="btn bnew" onclick="add()">+ NEW MODULE</button>
+  <button class="btn bzip" onclick="openNameModal()"><span class="zi">&#128230;</span>ZIP</button>
+</div>
+
+<input type="file" id="ifront" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="ilabel" accept="image/*" capture="environment" style="display:none">
+<canvas id="cvs"></canvas>
+
+<script>
+// ═══════════════════════════════════════════
+// SERVICE WORKER REGISTRATION
+// ═══════════════════════════════════════════
+var deferredPrompt=null;
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').then(function(){
+    console.log('SW registered — offline ready');
+  }).catch(function(e){
+    console.log('SW registration failed:',e);
+  });
+}
+
+// Android/Chrome install prompt
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  deferredPrompt=e;
+  document.getElementById('installBar').classList.remove('hid');
+});
+
+window.addEventListener('appinstalled',function(){
+  document.getElementById('installBar').classList.add('hid');
+  notify('App installed — works offline now!');
+});
+
+// Show iOS instructions if on iOS Safari (no install prompt available)
+var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+var isInStandaloneMode=window.navigator.standalone===true;
+if(isIOS && !isInStandaloneMode){
+  // Show a subtle hint after 3 seconds
+  setTimeout(function(){
+    if(!sessionStorage.getItem('ios-hint-shown')){
+      sessionStorage.setItem('ios-hint-shown','1');
+      showIOSHint();
+    }
+  },3000);
+}
+
+function showIOSHint(){
+  // Add a small "Add to Home Screen" button in header
+  var hdr=document.querySelector('.hdr-r');
+  var btn=document.createElement('button');
+  btn.className='ibtn ibtn-install';
+  btn.style.cssText='height:32px;padding:0 10px;font-size:10px;border-radius:7px;';
+  btn.textContent='+ INSTALL';
+  btn.onclick=function(){document.getElementById('iosModal').classList.remove('hid')};
+  hdr.insertBefore(btn,hdr.firstChild);
+}
+
+function installApp(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(){deferredPrompt=null});
+  }
+}
+
+function dismissInstall(){
+  document.getElementById('installBar').classList.add('hid');
+}
+
+// ═══════════════════════════════════════════
+// ZIP BUILDER
+// ═══════════════════════════════════════════
+var ENC=new TextEncoder();
+function u16(n){var b=new Uint8Array(2);new DataView(b.buffer).setUint16(0,n,true);return b}
+function u32(n){var b=new Uint8Array(4);new DataView(b.buffer).setUint32(0,n,true);return b}
+function cat(){
+  var a=Array.from(arguments),tot=a.reduce(function(s,b){return s+b.length},0),o=new Uint8Array(tot),p=0;
+  for(var i=0;i<a.length;i++){o.set(a[i],p);p+=a[i].length}
+  return o;
+}
+function crc32(d){
+  var c=0xFFFFFFFF;
+  for(var i=0;i<d.length;i++){c^=d[i];for(var j=0;j<8;j++)c=(c&1)?(c>>>1)^0xEDB88320:c>>>1}
+  return(c^0xFFFFFFFF)>>>0;
+}
+function mkzip(files){
+  var SLF=new Uint8Array([0x50,0x4B,0x03,0x04]);
+  var SCD=new Uint8Array([0x50,0x4B,0x01,0x02]);
+  var SEN=new Uint8Array([0x50,0x4B,0x05,0x06]);
+  var locals=[],offset=0;
+  for(var i=0;i<files.length;i++){
+    var f=files[i],nm=ENC.encode(f.name),crc=crc32(f.data),sz=f.data.length;
+    var lh=cat(SLF,u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(sz),u32(sz),u16(nm.length),u16(0),nm);
+    locals.push({lh:lh,data:f.data,offset:offset,nm:nm,crc:crc,sz:sz});
+    offset+=lh.length+sz;
+  }
+  var cds=[],cdOffset=offset,cdSize=0;
+  for(var i=0;i<locals.length;i++){
+    var f=locals[i];
+    var cd=cat(SCD,u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(f.crc),u32(f.sz),u32(f.sz),u16(f.nm.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(f.offset),f.nm);
+    cds.push(cd);cdSize+=cd.length;
+  }
+  var eocd=cat(SEN,u16(0),u16(0),u16(locals.length),u16(locals.length),u32(cdSize),u32(cdOffset),u16(0));
+  var parts=[];
+  for(var i=0;i<locals.length;i++){parts.push(locals[i].lh);parts.push(locals[i].data)}
+  for(var i=0;i<cds.length;i++)parts.push(cds[i]);
+  parts.push(eocd);
+  return cat.apply(null,parts);
+}
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function toDataURL(file){
+  return new Promise(function(ok,err){
+    var r=new FileReader();r.onload=function(){ok(r.result)};r.onerror=err;r.readAsDataURL(file);
+  });
+}
+function p2(n){return String(n).padStart(2,'0')}
+
+// ═══════════════════════════════════════════
+// EXIF ORIENTATION
+// ═══════════════════════════════════════════
+function getExifOrientation(file){
+  return new Promise(function(ok){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var view=new DataView(e.target.result);
+        if(view.getUint16(0,false)!==0xFFD8){ok(1);return}
+        var length=view.byteLength,offset=2;
+        while(offset<length){
+          if(view.getUint16(offset,false)===0xFFE1){
+            offset+=4;
+            if(view.getUint32(offset,false)!==0x45786966){ok(1);return}
+            var little=view.getUint16(offset+=6,false)===0x4949;
+            offset+=view.getUint32(offset+4,little);
+            var tags=view.getUint16(offset,little);offset+=2;
+            for(var i=0;i<tags;i++){
+              if(view.getUint16(offset+(i*12),little)===0x0112){ok(view.getUint16(offset+(i*12)+8,little));return}
+            }
+          } else if((view.getUint16(offset,false)&0xFF00)!==0xFF00) break;
+          else offset+=2+view.getUint16(offset+2,false);
+        }
+      }catch(ex){}
+      ok(1);
+    };
+    reader.onerror=function(){ok(1)};
+    reader.readAsArrayBuffer(file.slice(0,65536));
+  });
+}
+function drawOriented(ctx,img,ori,W,H){
+  ctx.save();
+  switch(ori){
+    case 2:ctx.transform(-1,0,0,1,W,0);break;
+    case 3:ctx.transform(-1,0,0,-1,W,H);break;
+    case 4:ctx.transform(1,0,0,-1,0,H);break;
+    case 5:ctx.transform(0,1,1,0,0,0);break;
+    case 6:ctx.transform(0,1,-1,0,H,0);break;
+    case 7:ctx.transform(0,-1,-1,0,H,W);break;
+    case 8:ctx.transform(0,-1,1,0,0,W);break;
+  }
+  ctx.drawImage(img,0,0);ctx.restore();
+}
+
+// ═══════════════════════════════════════════
+// BARCODE
+// ═══════════════════════════════════════════
+var BD=null;
+if('BarcodeDetector' in window){try{BD=new BarcodeDetector()}catch(e){}}
+
+async function readBarcode(file,dataURL){
+  if(!BD)return null;
+  var cvs=document.getElementById('cvs'),ctx=cvs.getContext('2d');
+  try{
+    var ori=await getExifOrientation(file);
+    var rotated=(ori>=5&&ori<=8);
+    var img=await new Promise(function(ok,err){var i=new Image();i.onload=function(){ok(i)};i.onerror=err;i.src=dataURL});
+    var W=img.naturalWidth,H=img.naturalHeight;
+    var cw=rotated?H:W,ch=rotated?W:H;
+    var sc=Math.min(1,1200/Math.max(cw,ch));
+    cvs.width=Math.round(cw*sc);cvs.height=Math.round(ch*sc);
+    ctx.scale(sc,sc);drawOriented(ctx,img,ori,W,H);ctx.setTransform(1,0,0,1,0,0);
+    var r=await BD.detect(cvs);if(r.length)return r[0].rawValue.trim();
+    cvs.width=cw;cvs.height=ch;
+    drawOriented(ctx,img,ori,W,H);
+    r=await BD.detect(cvs);if(r.length)return r[0].rawValue.trim();
+    var id=ctx.getImageData(0,0,cvs.width,cvs.height),px=id.data;
+    for(var i=0;i<px.length;i+=4){var g=Math.round(0.299*px[i]+0.587*px[i+1]+0.114*px[i+2]);var b=Math.min(255,Math.max(0,(g-128)*2+128));px[i]=px[i+1]=px[i+2]=b}
+    ctx.putImageData(id,0,0);
+    r=await BD.detect(cvs);if(r.length)return r[0].rawValue.trim();
+    var oris=[1,6,3,8];
+    for(var ri=0;ri<oris.length;ri++){
+      var o=oris[ri],rot=(o>=5&&o<=8);
+      cvs.width=rot?H:W;cvs.height=rot?W:H;
+      drawOriented(ctx,img,o,W,H);
+      r=await BD.detect(cvs);if(r.length)return r[0].rawValue.trim();
+    }
+  }catch(e){}
+  return null;
+}
+
+// ═══════════════════════════════════════════
+// NAMING
+// ═══════════════════════════════════════════
+function frontName(num,sn,ext){return 'N'+num+'_M_('+sn+').'+ext}
+function labelName(num,sn,ext){return 'N'+num+'_SN_('+sn+').'+ext}
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+var mods=[];
+var nextNum=1;
+
+function add(){
+  var id=Date.now().toString(36)+Math.random().toString(36).slice(2);
+  var num=nextNum++;
+  mods.push({id:id,num:num,ff:null,furl:null,lf:null,lurl:null,sn:'',ok:false,scanning:false,editing:false});
+  render(id);
+  document.getElementById('empty').style.display='none';
+  setTimeout(function(){var el=document.getElementById('C'+id);if(el)el.scrollIntoView({behavior:'smooth',block:'center'})},120);
+}
+
+function remove(id){
+  mods=mods.filter(function(m){return m.id!==id});
+  var el=document.getElementById('C'+id);if(el)el.remove();
+  recount();
+  if(!mods.length)document.getElementById('empty').style.display='';
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render(id){
+  var m=null;
+  for(var i=0;i<mods.length;i++)if(mods[i].id===id){m=mods[i];break}
+  if(!m)return;
+  var s1=!!m.furl,s2=!!m.lurl,dn=m.ok;
+  var p1=s1?'done':'act',p2c=s2?'done':(s1?'act':''),p3c=dn?'done':(s2?'act':'');
+  var fext=m.ff?(m.ff.name.split('.').pop()||'jpg').toLowerCase():'jpg';
+  var lext=m.lf?(m.lf.name.split('.').pop()||'jpg').toLowerCase():'jpg';
+  var snPart='';
+  if(dn){
+    if(m.editing){
+      snPart='<input type="text" id="edit'+id+'" value="'+m.sn+'"'+
+        ' style="background:var(--s2);border:1px solid var(--ac);border-radius:5px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;padding:3px 8px;outline:none;width:130px;letter-spacing:.04em"'+
+        ' autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"'+
+        ' oninput="mods.find(function(x){return x.id===\''+id+'\'}).sn=this.value.trim().toUpperCase()"'+
+        ' onkeydown="if(event.key===\'Enter\')doneEdit(\''+id+'\')">';
+    } else {
+      snPart='<span class="csn">'+m.sn+'</span>';
+    }
+  } else {
+    snPart='<span class="csn dim">'+(s2?'ENTER S/N':s1?'STEP 2: LABEL':'STEP 1: FRONT')+'</span>';
+  }
+  var editBtn=dn?(m.editing
+    ?'<button class="btn bsm bgn" onclick="doneEdit(\''+id+'\')">SAVE</button>'
+    :'<button class="btn bsm bedit" onclick="startEdit(\''+id+'\')">EDIT S/N</button>'):'';
+  var header='<div class="ch"><div class="ch-left"><span class="num-badge">N'+m.num+'</span>'+snPart+'</div>'+
+    '<div class="ch-right">'+editBtn+'<button class="btn bsm bdel" onclick="remove(\''+id+'\')">&#10005;</button></div></div>';
+  var pills='<div class="pills"><div class="pill '+p1+'"></div><div class="pill '+p2c+'"></div><div class="pill '+p3c+'"></div></div>';
+  var fc=m.furl?('<img class="pimg" src="'+m.furl+'">')
+    :('<div class="ph" onclick="cap(\''+id+'\',\'front\')"><div class="ei">&#128247;</div><div class="et">TAP TO SHOOT</div></div>');
+  var fn=dn?('<div class="pname ready">'+frontName(m.num,m.sn,fext)+'</div>')
+    :('<div class="pname dim">'+(m.furl?'waiting for S/N...':'not taken')+'</div>');
+  var lc=m.lurl?('<img class="pimg" src="'+m.lurl+'">')
+    :('<div class="ph'+(s1?'':' off')+'"'+(s1?' onclick="cap(\''+id+'\',\'label\')"':'')+'>'+
+      '<div class="ei">&#128290;</div><div class="et">'+(s1?'TAP TO SHOOT':'AFTER STEP 1')+'</div></div>');
+  var ln=dn?('<div class="pname ready">'+labelName(m.num,m.sn,lext)+'</div>')
+    :('<div class="pname dim">'+(m.lurl?'waiting for S/N...':'not taken')+'</div>');
+  var sr='';
+  if(m.scanning) sr='<div class="srow"><span class="sbadge sscan">SCANNING BARCODE...</span></div>';
+  else if(!dn&&s2&&m.sn) sr='<div class="srow"><span class="sbadge sfound">BARCODE READ</span><span class="sv">'+m.sn+'</span></div>';
+  else if(!dn&&s2&&!m.sn) sr='<div class="srow"><span class="sbadge snope">'+(BD?'NOT DETECTED':'NO SCANNER')+' — TYPE BELOW</span></div>';
+  var ir=(!dn&&s1&&s2&&!m.scanning)
+    ?('<div class="irow"><label>S/N</label><input type="text" id="si'+id+'" value="'+m.sn+'" placeholder="Serial number"'+
+      ' autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"'+
+      ' oninput="upd(\''+id+'\',this.value)" onkeydown="if(event.key===\'Enter\')setmod(\''+id+'\')">'+
+      '<button class="btn bset" id="bset'+id+'" onclick="setmod(\''+id+'\')"'+(m.sn?'':' disabled')+'>SET</button></div>'):'';
+  var html='<div class="card" id="C'+id+'">'+header+pills+
+    '<div class="photos"><div class="pc"><div class="plbl">&#9312; FRONT</div>'+fc+fn+'</div>'+
+    '<div class="pc"><div class="plbl">&#9313; LABEL</div>'+lc+ln+'</div></div>'+sr+ir+'</div>';
+  var ex=document.getElementById('C'+id);
+  if(ex)ex.outerHTML=html;
+  else document.getElementById('list').insertAdjacentHTML('afterbegin',html);
+  recount();
+}
+
+function upd(id,v){
+  for(var i=0;i<mods.length;i++)if(mods[i].id===id){mods[i].sn=v.trim().toUpperCase();break}
+  var b=document.getElementById('bset'+id);if(b)b.disabled=!v.trim();
+}
+function setmod(id){
+  var m=null;for(var i=0;i<mods.length;i++)if(mods[i].id===id){m=mods[i];break}
+  if(!m||!m.sn)return;
+  m.sn=m.sn.trim().toUpperCase();m.ok=true;render(id);
+  notify('N'+m.num+' confirmed: '+m.sn);
+}
+function startEdit(id){
+  for(var i=0;i<mods.length;i++)if(mods[i].id===id){mods[i].editing=true;break}
+  render(id);
+  setTimeout(function(){var el=document.getElementById('edit'+id);if(el){el.focus();el.select()}},80);
+}
+function doneEdit(id){
+  var m=null;for(var i=0;i<mods.length;i++)if(mods[i].id===id){m=mods[i];break}
+  if(!m)return;
+  var el=document.getElementById('edit'+id);
+  if(el&&el.value.trim())m.sn=el.value.trim().toUpperCase();
+  m.editing=false;render(id);
+  notify('N'+m.num+' updated: '+m.sn);
+}
+function recount(){
+  var n=0;for(var i=0;i<mods.length;i++)if(mods[i].ok)n++;
+  document.getElementById('cnt').textContent=n;
+}
+
+// ═══════════════════════════════════════════
+// CAPTURE
+// ═══════════════════════════════════════════
+function cap(id,type){
+  var el=document.getElementById(type==='front'?'ifront':'ilabel');
+  el.value='';el._id=id;el._type=type;el.click();
+}
+document.getElementById('ifront').addEventListener('change',function(){go(this._id,'front',this.files[0])});
+document.getElementById('ilabel').addEventListener('change',function(){go(this._id,'label',this.files[0])});
+
+async function go(id,type,file){
+  if(!file)return;
+  var m=null;for(var i=0;i<mods.length;i++)if(mods[i].id===id){m=mods[i];break}
+  if(!m)return;
+  var url=await toDataURL(file);
+  if(type==='front'){
+    m.ff=file;m.furl=url;render(id);
+  } else {
+    m.lf=file;m.lurl=url;m.scanning=true;m.sn='';render(id);
+    var res=await readBarcode(file,url);
+    m.scanning=false;m.sn=res?res.toUpperCase():'';render(id);
+    setTimeout(function(){
+      var inp=document.getElementById('si'+id);
+      if(inp){inp.focus();inp.select();inp.scrollIntoView({behavior:'smooth',block:'center'})}
+    },150);
+    if(res)notify('Barcode read: '+m.sn);
+    else notify(BD?'Not detected — type S/N manually':'Enter S/N manually','warn');
+  }
+}
+
+// ═══════════════════════════════════════════
+// ZIP FLOW
+// ═══════════════════════════════════════════
+function openNameModal(){
+  var ready=mods.filter(function(m){return m.ok&&m.ff&&m.lf});
+  if(!ready.length){notify('No confirmed modules yet','warn');return}
+  document.getElementById('zipNameInput').value='';
+  document.getElementById('nameModal').classList.remove('hid');
+  setTimeout(function(){document.getElementById('zipNameInput').focus()},200);
+}
+function goToReview(){
+  var nameVal=document.getElementById('zipNameInput').value.trim();
+  if(!nameVal){notify('Please enter a ZIP name','warn');return}
+  var ready=mods.filter(function(m){return m.ok&&m.ff&&m.lf});
+  var list=document.getElementById('reviewList');
+  list.innerHTML='';
+  document.getElementById('reviewSub').textContent=ready.length+' module(s) · '+(ready.length*2)+' photos';
+  for(var i=0;i<ready.length;i++){
+    var m=ready[i];
+    var fext=(m.ff.name.split('.').pop()||'jpg').toLowerCase();
+    var lext=(m.lf.name.split('.').pop()||'jpg').toLowerCase();
+    var div=document.createElement('div');
+    div.className='review-item';
+    div.innerHTML='<div class="ri-num">SET N'+m.num+' · S/N: '+m.sn+'</div>'+
+      '<div class="ri-file">'+frontName(m.num,m.sn,fext)+'</div>'+
+      '<div class="ri-file">'+labelName(m.num,m.sn,lext)+'</div>';
+    list.appendChild(div);
+  }
+  closeModal('nameModal');
+  document.getElementById('reviewModal').classList.remove('hid');
+}
+async function buildZip(){
+  var nameVal=document.getElementById('zipNameInput').value.trim()||'modules';
+  var zipName=nameVal.replace(/[^a-zA-Z0-9_\-]/g,'_');
+  closeModal('reviewModal');
+  var ready=mods.filter(function(m){return m.ok&&m.ff&&m.lf});
+  var ovt=document.getElementById('ovt'),ovs=document.getElementById('ovs'),
+      pf=document.getElementById('progf'),sp=document.getElementById('spin'),
+      zl=document.getElementById('zlink'),zu=document.getElementById('zurl'),
+      cl=document.getElementById('ovcls'),pm=document.getElementById('progModal');
+  sp.style.display='block';zl.classList.add('hid');cl.classList.add('hid');
+  ovt.textContent='READING FILES...';ovs.textContent='';pf.style.width='0%';
+  pm.classList.remove('hid');
+  var zfiles=[],total=ready.length*2,done=0;
+  for(var i=0;i<ready.length;i++){
+    var m=ready[i];
+    var fext=(m.ff.name.split('.').pop()||'jpg').toLowerCase();
+    var lext=(m.lf.name.split('.').pop()||'jpg').toLowerCase();
+    ovs.textContent='N'+m.num+' front...';
+    zfiles.push({name:frontName(m.num,m.sn,fext),data:new Uint8Array(await m.ff.arrayBuffer())});
+    pf.style.width=Math.round(++done/total*100)+'%';
+    ovs.textContent='N'+m.num+' label...';
+    zfiles.push({name:labelName(m.num,m.sn,lext),data:new Uint8Array(await m.lf.arrayBuffer())});
+    pf.style.width=Math.round(++done/total*100)+'%';
+  }
+  ovt.textContent='COMPRESSING...';ovs.textContent=zfiles.length+' photos';
+  await new Promise(function(r){setTimeout(r,60)});
+  var bytes=mkzip(zfiles);
+  var blob=new Blob([bytes],{type:'application/zip'});
+  var href=URL.createObjectURL(blob);
+  var fname=zipName+'.zip';
+  try{var a=document.createElement('a');a.href=href;a.download=fname;document.body.appendChild(a);a.click();document.body.removeChild(a)}catch(e){}
+  sp.style.display='none';
+  ovt.textContent='ZIP READY';
+  ovs.textContent=ready.length+' module(s) · '+fname;
+  zu.href=href;zu.download=fname;zu.textContent='SAVE  '+fname;
+  zl.classList.remove('hid');cl.classList.remove('hid');
+}
+function closeModal(id){document.getElementById(id).classList.add('hid')}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function notify(msg,type){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+(type==='warn'?'twarn':'tok')+' tshow';
+  clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('tshow')},2800);
+}
+</script>
+</body>
+</html>
